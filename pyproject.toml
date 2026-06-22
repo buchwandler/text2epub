@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["text2epub*"]
+
+[tool.setuptools.package-data]
+text2epub = ["py.typed"]
+
+[project]
+name = "text2epub"
+description = "Create and safely rebuild EPUB files from structured text and Markdown."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Holger Nahrstaedt", email = "nahrstaedt@gmail.com" }]
+urls = { Homepage = "https://github.com/holgern/text2epub" }
+dynamic = ["version"]
+dependencies = [
+    "beautifulsoup4>=4.12.0",
+    "lxml>=4.9.0",
+    "markdown-it-py>=3.0.0",
+    "mdit-py-plugins>=0.4.0",
+    "typing-extensions>=4.8.0; python_version < '3.11'",
+]
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Text Processing :: Markup",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "ruff>=0.1.0"]
+
+[project.scripts]
+text2epub = "text2epub.cli:main"
+
+[tool.setuptools_scm]
+write_to = "text2epub/_version.py"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
