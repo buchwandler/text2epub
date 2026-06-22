@@ -5,33 +5,106 @@
 
 # text2epub
 
-`text2epub` is a typed Python library for two EPUB output workflows:
+`text2epub` is a typed Python library and CLI for creating EPUB files from
+plain-text writing workflows. It is useful when you keep a manuscript as one
+Markdown file, as a folder of numbered Markdown chapters, or as already-rendered
+XHTML chapter fragments.
 
-1. **Safe rebuilds of existing EPUBs** from structured extraction manifests and
-   validated text replacements.
-2. **New EPUB creation from Markdown** with generated XHTML, OPF, NAV, NCX,
-   CSS, and deterministic package output.
-
-The primary client is `booktx`, so package-preserving rebuild behavior takes
-priority over convenience features.
+It also includes a conservative rebuild workflow for tools such as `booktx` that
+need to apply validated text replacements to an existing EPUB without rewriting
+unchanged package entries.
 
 ## Features
 
+- create new EPUBs from one Markdown file
+- create new EPUBs from a folder of ordered Markdown files
+- discover chapters from filename-based manuscript conventions
+- generate XHTML, OPF, NAV, NCX, CSS, and deterministic ZIP output
+- package local image assets referenced by Markdown
+- support YAML-like front matter for common EPUB metadata
+- build EPUBs from explicit XHTML chapter bodies
+- safely rebuild existing EPUBs from extraction manifests and replacement plans
 - byte-identical no-op and identity rebuild paths
-- ZIP-level EPUB validation
-- strict unresolved-token scanning for rewritten or generated text entries
-- safe plain-text and inline-XHTML replacement support
-- Markdown-to-EPUB generation for single-file and multi-file books
-- deterministic output by default
-- small public API and CLI smoke commands
+- basic EPUB package validation and unresolved-token checks
 
 ## Installation
 
 ```bash
-uv pip install -e .
+uv pip install text2epub
 ```
 
-## Python API
+For development from a checkout:
+
+```bash
+python -m pip install -e .
+```
+
+## Folder-based Markdown workflow
+
+A simple manuscript folder can use filenames to define reading order:
+
+```text
+manuscript/
+├── 00-front-matter.md
+├── 01-introduction.md
+├── 02-method.md
+└── 03-appendix.md
+```
+
+The first file may contain front matter for book metadata:
+
+```markdown
+---
+title: Example Book
+language: en
+author: Ada Lovelace
+publisher: Example Press
+date: 2026-06-22
+---
+
+# Introduction
+
+This becomes the first EPUB chapter.
+```
+
+Build it from Python with the convenience API:
+
+```python
+from pathlib import Path
+
+from text2epub import create_epub_from_markdown_folder
+
+create_epub_from_markdown_folder(
+    Path("manuscript"),
+    Path("book.epub"),
+)
+```
+
+Or build the same folder from the CLI:
+
+```bash
+text2epub markdown manuscript/ -o book.epub
+```
+
+## Explicit Python API
+
+Use `create_epub_from_markdown_files` when your application already controls the
+chapter list and order:
+
+```python
+from pathlib import Path
+
+from text2epub import EpubMetadata, create_epub_from_markdown_files
+
+create_epub_from_markdown_files(
+    [Path("01-introduction.md"), Path("02-body.md")],
+    Path("book.epub"),
+    metadata=EpubMetadata(title="Example Book", language="en"),
+)
+```
+
+Use the lower-level model API when you need per-chapter ids, hrefs, titles, or
+custom build options:
 
 ```python
 from pathlib import Path
@@ -41,10 +114,7 @@ from text2epub import (
     EpubMetadata,
     MarkdownBook,
     MarkdownChapter,
-    Replacement,
-    ReplacementPlan,
     create_epub_from_markdown,
-    rebuild_epub,
 )
 
 book = MarkdownBook(
@@ -53,6 +123,14 @@ book = MarkdownBook(
     options=BuildOptions(deterministic=True),
 )
 create_epub_from_markdown(book, Path("book.epub"))
+```
+
+## Rebuild API
+
+```python
+from pathlib import Path
+
+from text2epub import Replacement, ReplacementPlan, rebuild_epub
 
 report = rebuild_epub(
     ReplacementPlan(

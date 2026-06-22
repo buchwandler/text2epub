@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .builder import create_epub_from_markdown
 from .errors import Text2EpubError, ValidationError
-from .markdown import is_remote_resource
+from .markdown import discover_markdown_chapters
 from .models import (
     BuildOptions,
     EpubMetadata,
@@ -177,17 +177,4 @@ def handle_version(_: argparse.Namespace) -> int:
 
 
 def discover_markdown_inputs(input_path: Path) -> list[Path]:
-    if input_path.is_dir():
-        chapter_paths = sorted(input_path.glob("*.md"))
-        if not chapter_paths:
-            raise Text2EpubError(
-                f"Markdown directory {input_path} does not contain any .md files."
-            )
-        return chapter_paths
-    if input_path.is_file():
-        return [input_path]
-    if is_remote_resource(str(input_path)):
-        raise Text2EpubError(
-            f"Markdown input {input_path} must be a local file or directory."
-        )
-    raise Text2EpubError(f"Markdown input {input_path} does not exist.")
+    return [chapter.path for chapter in discover_markdown_chapters(input_path)]

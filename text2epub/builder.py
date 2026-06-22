@@ -7,8 +7,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .errors import BuildError
-from .markdown import RenderedAsset, prepare_markdown_book, relative_href
-from .models import BuildOptions, EpubMetadata, MarkdownBook, XhtmlChapter
+from .markdown import (
+    RenderedAsset,
+    discover_markdown_chapters,
+    prepare_markdown_book,
+    relative_href,
+)
+from .models import (
+    BuildOptions,
+    EpubMetadata,
+    MarkdownBook,
+    MarkdownChapter,
+    XhtmlChapter,
+)
 from .nav import build_nav_document
 from .ncx import build_ncx_document
 from .opf import build_content_opf
@@ -35,6 +46,62 @@ h1, h2, h3 {
   margin-top: 1.5em;
 }
 """
+
+
+def create_epub_from_markdown_files(
+    chapter_paths: Sequence[Path | str],
+    output_path: Path | str,
+    *,
+    metadata: EpubMetadata | None = None,
+    options: BuildOptions | None = None,
+) -> Path:
+    """Create an EPUB from an explicit list of Markdown files.
+
+    The supplied order is the EPUB spine order. Use this helper when your
+    application already knows the chapter files and should not rely on folder
+    discovery. Metadata may come from the first file's front matter when
+    ``metadata`` is omitted or fields are left empty.
+    """
+
+    chapters = [MarkdownChapter(path=Path(path)) for path in chapter_paths]
+    if not chapters:
+        raise BuildError("create_epub_from_markdown_files requires at least one file.")
+    book = MarkdownBook(
+        metadata=metadata or EpubMetadata(title="", language=""),
+        chapters=chapters,
+        options=options or BuildOptions(),
+    )
+    return create_epub_from_markdown(book, output_path)
+
+
+def create_epub_from_markdown_folder(
+    input_dir: Path | str,
+    output_path: Path | str,
+    *,
+    metadata: EpubMetadata | None = None,
+    options: BuildOptions | None = None,
+    pattern: str = "*.md",
+    recursive: bool = False,
+) -> Path:
+    """Create an EPUB from Markdown files discovered in a folder.
+
+    Direct children matching ``pattern`` are sorted by filename by default. This
+    supports simple manuscript folder conventions such as
+    ``00-front-matter.md``, ``01-introduction.md`` and ``02-chapter.md``. Set
+    ``recursive=True`` to sort matching files by relative path.
+    """
+
+    chapters = discover_markdown_chapters(
+        input_dir,
+        pattern=pattern,
+        recursive=recursive,
+    )
+    book = MarkdownBook(
+        metadata=metadata or EpubMetadata(title="", language=""),
+        chapters=chapters,
+        options=options or BuildOptions(),
+    )
+    return create_epub_from_markdown(book, output_path)
 
 
 def create_epub_from_markdown(book: MarkdownBook, output_path: Path | str) -> Path:

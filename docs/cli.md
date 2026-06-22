@@ -15,6 +15,16 @@ text2epub markdown INPUT.md -o OUTPUT.epub
 text2epub markdown CHAPTER_DIR -o OUTPUT.epub --title "Book" --language en
 ```
 
+When `CHAPTER_DIR` is a directory, direct `*.md` children are sorted by filename
+and used as spine order. This supports manuscript folders such as:
+
+```text
+chapters/
+├── 00-front-matter.md
+├── 01-introduction.md
+└── 02-chapter.md
+```
+
 Options:
 
 - `--title`, `--language`, `--creator`, `--identifier`, `--publisher`, `--description`, `--rights`, `--date`: metadata fields.
@@ -56,4 +66,5 @@ text2epub validate OUTPUT.epub
 text2epub validate OUTPUT.epub --json
 ```
 
-Validation checks ZIP readability, the EPUB `mimetype` entry, `META-INF/container.xml`, and unresolved-token patterns in text entries.
+Validation checks ZIP readability, the EPUB `mimetype` entry,
+`META-INF/container.xml`, and unresolved-token patterns in text entries.

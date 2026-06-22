@@ -33,11 +33,23 @@ This page documents the stable public API exposed from `text2epub.__init__`.
    :members:
 ```
 
-## Builders
+## Markdown builders
+
+Use these helpers for general-purpose Markdown projects.
 
 ```{eval-rst}
-.. autofunction:: text2epub.create_epub_from_markdown
+.. autofunction:: text2epub.discover_markdown_chapters
 
+.. autofunction:: text2epub.create_epub_from_markdown_folder
+
+.. autofunction:: text2epub.create_epub_from_markdown_files
+
+.. autofunction:: text2epub.create_epub_from_markdown
+```
+
+## XHTML builder
+
+```{eval-rst}
 .. autofunction:: text2epub.create_epub
 ```
 

@@ -11,7 +11,13 @@ from lxml import html as lxml_html
 from markdown_it import MarkdownIt
 
 from .errors import BuildError
-from .models import BuildOptions, EpubMetadata, MarkdownBook, XhtmlChapter
+from .models import (
+    BuildOptions,
+    EpubMetadata,
+    MarkdownBook,
+    MarkdownChapter,
+    XhtmlChapter,
+)
 
 MARKDOWN_PARSER = MarkdownIt("commonmark", {"html": False}).enable("table")
 
@@ -29,6 +35,54 @@ class RenderedMarkdownBook:
     chapters: list[XhtmlChapter]
     options: BuildOptions
     assets: list[RenderedAsset]
+
+
+def discover_markdown_chapters(
+    input_path: Path | str,
+    *,
+    pattern: str = "*.md",
+    recursive: bool = False,
+) -> list[MarkdownChapter]:
+    """Discover Markdown chapters from a file or folder.
+
+    Files are returned in filename order, which makes naming schemes such as
+    ``00-front-matter.md``, ``01-introduction.md`` and ``02-chapter.md`` a
+    stable way to control EPUB spine order.
+
+    Args:
+        input_path: A Markdown file or a directory containing Markdown files.
+        pattern: Glob pattern used when ``input_path`` is a directory.
+        recursive: Use recursive directory discovery with ``Path.rglob``.
+
+    Returns:
+        Markdown chapters ready to pass to ``MarkdownBook``.
+
+    Raises:
+        BuildError: If the input does not exist or no matching Markdown files
+            are found.
+    """
+
+    raw_input = str(input_path)
+    path = Path(input_path)
+    if path.is_file():
+        return [MarkdownChapter(path=path)]
+    if path.is_dir():
+        iterator = path.rglob(pattern) if recursive else path.glob(pattern)
+        chapter_paths = sorted(
+            (candidate for candidate in iterator if candidate.is_file()),
+            key=lambda candidate: candidate.relative_to(path).as_posix(),
+        )
+        if not chapter_paths:
+            raise BuildError(
+                f"Markdown directory {path} does not contain files matching "
+                f"{pattern!r}."
+            )
+        return [MarkdownChapter(path=chapter_path) for chapter_path in chapter_paths]
+    if is_remote_resource(raw_input):
+        raise BuildError(
+            f"Markdown input {raw_input!r} must be a local file or directory."
+        )
+    raise BuildError(f"Markdown input {path} does not exist.")
 
 
 def prepare_markdown_book(book: MarkdownBook) -> RenderedMarkdownBook:

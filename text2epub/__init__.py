@@ -5,7 +5,13 @@ try:
 except Exception:  # pragma: no cover
     __version__ = "0.0.0+unknown"
 
-from .builder import create_epub, create_epub_from_markdown
+from .builder import (
+    create_epub,
+    create_epub_from_markdown,
+    create_epub_from_markdown_files,
+    create_epub_from_markdown_folder,
+)
+from .markdown import discover_markdown_chapters
 from .models import (
     Author,
     BuildOptions,
@@ -32,5 +38,8 @@ __all__ = [
     "XhtmlChapter",
     "create_epub",
     "create_epub_from_markdown",
+    "create_epub_from_markdown_files",
+    "create_epub_from_markdown_folder",
+    "discover_markdown_chapters",
     "rebuild_epub",
 ]

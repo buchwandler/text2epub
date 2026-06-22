@@ -283,3 +283,47 @@ def test_multiple_markdown_files_spine_order(tmp_path: Path) -> None:
     assert content_opf.index('idref="chapter-001"') < content_opf.index(
         'idref="chapter-002"'
     )
+
+
+def test_discover_markdown_chapters_sorts_folder(tmp_path: Path) -> None:
+    (tmp_path / "02-body.md").write_text("# Body\n", encoding="utf-8")
+    (tmp_path / "01-start.md").write_text("# Start\n", encoding="utf-8")
+    (tmp_path / "notes.txt").write_text("ignore\n", encoding="utf-8")
+
+    from text2epub import discover_markdown_chapters
+
+    chapters = discover_markdown_chapters(tmp_path)
+
+    assert [chapter.path.name for chapter in chapters] == ["01-start.md", "02-body.md"]
+
+
+def test_create_epub_from_markdown_folder(tmp_path: Path) -> None:
+    manuscript = tmp_path / "manuscript"
+    manuscript.mkdir()
+    (manuscript / "00-metadata.md").write_text(
+        "---\n"
+        "title: Folder Book\n"
+        "language: en\n"
+        "author: Ada Lovelace\n"
+        "---\n\n"
+        "# Introduction\n\nAlpha.\n",
+        encoding="utf-8",
+    )
+    (manuscript / "01-chapter.md").write_text(
+        "# Chapter One\n\nBeta.\n", encoding="utf-8"
+    )
+    output = tmp_path / "folder-book.epub"
+
+    from text2epub import create_epub_from_markdown_folder
+
+    create_epub_from_markdown_folder(manuscript, output)
+
+    with zipfile.ZipFile(output) as archive:
+        content_opf = archive.read("OEBPS/content.opf").decode("utf-8")
+        first = archive.read("OEBPS/Text/chapter-001.xhtml").decode("utf-8")
+        second = archive.read("OEBPS/Text/chapter-002.xhtml").decode("utf-8")
+
+    assert "<dc:title>Folder Book</dc:title>" in content_opf
+    assert "<dc:creator>Ada Lovelace</dc:creator>" in content_opf
+    assert "Alpha." in first
+    assert "Beta." in second
