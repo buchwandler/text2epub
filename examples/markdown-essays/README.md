@@ -6,6 +6,9 @@ Generates a multi-chapter EPUB entirely from Markdown. This is the high-level
 ## What it demonstrates
 
 - A book built from every `*.md` file in `chapters/`, sorted into spine order.
+- A generated title page is inserted before the Markdown chapters.
+- A generated reader-visible table of contents is inserted after the title page.
+- The TOC page requests automatic page numbers with CSS `target-counter()`; readers that do not support paged-media counters still show normal links.
 - YAML-like front matter in the first chapter drives the EPUB metadata.
 - Headings get stable IDs (`on-markdown`, `a-table-of-features`).
 - A local image (`assets/cover.png`) is copied into the package and rewritten to
@@ -35,5 +38,15 @@ text2epub markdown examples/markdown-essays/chapters \
   -o examples/markdown-essays/dist/essays.epub
 ```
 
-Note that the CLI does not load a custom `css_files` stylesheet; it only applies
-the built-in default CSS. Use the Python API shown in `build.py` for custom CSS.
+The CLI command above builds the Markdown chapters but does not enable the generated
+title page, generated reader-visible TOC page, or custom stylesheet. The equivalent
+front-matter command is:
+
+```bash
+text2epub markdown examples/markdown-essays/chapters \
+  -o examples/markdown-essays/dist/essays.epub \
+  --title-page --toc-page --toc-page-numbers
+```
+
+The CLI does not load a custom `css_files` stylesheet; it only applies the
+built-in default CSS. Use the Python API shown in `build.py` for custom CSS.

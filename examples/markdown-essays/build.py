@@ -36,6 +36,9 @@ def main() -> None:
         chapters=[MarkdownChapter(path=path) for path in chapter_paths],
         options=BuildOptions(
             deterministic=True,
+            include_title_page=True,
+            include_toc_page=True,
+            toc_page_numbers=True,
             css_files=[HERE / "style.css"],
         ),
     )

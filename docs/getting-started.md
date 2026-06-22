@@ -43,18 +43,23 @@ Build the EPUB from Python:
 ```python
 from pathlib import Path
 
-from text2epub import create_epub_from_markdown_folder
+from text2epub import BuildOptions, create_epub_from_markdown_folder
 
 create_epub_from_markdown_folder(
     Path("manuscript"),
     Path("example.epub"),
+    options=BuildOptions(
+        include_title_page=True,
+        include_toc_page=True,
+        toc_page_numbers=True,
+    ),
 )
 ```
 
 Or use the CLI:
 
 ```bash
-text2epub markdown manuscript/ -o example.epub
+text2epub markdown manuscript/ -o example.epub --title-page --toc-page --toc-page-numbers
 ```
 
 ## Create an EPUB from one Markdown file
@@ -72,19 +77,20 @@ Build the EPUB from Python:
 ```python
 from pathlib import Path
 
-from text2epub import EpubMetadata, create_epub_from_markdown_files
+from text2epub import BuildOptions, EpubMetadata, create_epub_from_markdown_files
 
 create_epub_from_markdown_files(
     [Path("chapter-01.md")],
     Path("example.epub"),
     metadata=EpubMetadata(title="Example Book", language="en"),
+    options=BuildOptions(include_title_page=True, include_toc_page=True),
 )
 ```
 
 Or use the CLI:
 
 ```bash
-text2epub markdown chapter-01.md -o example.epub --title "Example Book" --language en
+text2epub markdown chapter-01.md -o example.epub --title "Example Book" --language en --title-page --toc-page
 ```
 
 ## Validate output
@@ -96,3 +102,13 @@ text2epub validate example.epub
 A successful response confirms that the archive has the expected EPUB ZIP basics
 and that known unresolved internal tokens were not found in text entries. Run
 EPUBCheck separately before publication.
+
+## Add a title page and visible contents page
+
+Set `include_title_page=True` to add a generated title page to the EPUB spine.
+Set `include_toc_page=True` to add a reader-visible table of contents page. The
+EPUB NAV file is still generated separately for reader navigation.
+
+`toc_page_numbers=True` requests automatic page numbers in the generated TOC page
+using CSS `target-counter()`. EPUB readers do not share one universal page model,
+so unsupported readers will show the linked entries without page numbers.

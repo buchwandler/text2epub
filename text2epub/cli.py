@@ -56,6 +56,21 @@ def build_parser() -> argparse.ArgumentParser:
     markdown_parser.add_argument("--no-ncx", action="store_true")
     markdown_parser.add_argument("--non-deterministic", action="store_true")
     markdown_parser.add_argument("--allow-remote-resources", action="store_true")
+    markdown_parser.add_argument(
+        "--title-page",
+        action="store_true",
+        help="add a generated reader-visible title page to the EPUB spine",
+    )
+    markdown_parser.add_argument(
+        "--toc-page",
+        action="store_true",
+        help="add a generated reader-visible table-of-contents page to the spine",
+    )
+    markdown_parser.add_argument(
+        "--toc-page-numbers",
+        action="store_true",
+        help="request automatic page numbers in the generated TOC page via CSS",
+    )
     markdown_parser.add_argument("--json", action="store_true")
     markdown_parser.set_defaults(handler=handle_markdown)
 
@@ -95,6 +110,9 @@ def handle_markdown(args: argparse.Namespace) -> int:
         include_ncx=not args.no_ncx,
         deterministic=not args.non_deterministic,
         allow_remote_resources=args.allow_remote_resources,
+        include_title_page=args.title_page,
+        include_toc_page=args.toc_page,
+        toc_page_numbers=args.toc_page_numbers,
     )
     book = MarkdownBook(
         metadata=metadata,

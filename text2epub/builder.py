@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 from .errors import BuildError
 from .markdown import (
@@ -44,6 +45,29 @@ p {
 }
 h1, h2, h3 {
   margin-top: 1.5em;
+}
+.title-page {
+  text-align: center;
+  margin-top: 20%;
+}
+.title-page .subtitle {
+  font-size: 1.2em;
+}
+.title-page .creator,
+.title-page .publisher,
+.title-page .date {
+  margin-top: 1.5em;
+}
+.reader-toc ol {
+  list-style-type: none;
+  margin-left: 0;
+  padding-left: 0;
+}
+.reader-toc li {
+  margin: 0.35em 0;
+}
+.reader-toc.with-page-numbers a::after {
+  content: leader('.') ' ' target-counter(attr(href), page);
 }
 """
 
@@ -115,6 +139,123 @@ def create_epub_from_markdown(book: MarkdownBook, output_path: Path | str) -> Pa
     )
 
 
+def compose_spine_chapters(
+    metadata: EpubMetadata,
+    content_chapters: Sequence[XhtmlChapter],
+    options: BuildOptions,
+) -> list[XhtmlChapter]:
+    """Return the EPUB spine, optionally prefixed by generated front matter."""
+
+    existing_ids = {chapter.id for chapter in content_chapters}
+    existing_hrefs = {chapter.href for chapter in content_chapters}
+    generated: list[XhtmlChapter] = []
+
+    if options.include_title_page:
+        title_id = unique_generated_value("title-page", existing_ids)
+        existing_ids.add(title_id)
+        title_href = unique_generated_value("Text/title-page.xhtml", existing_hrefs)
+        existing_hrefs.add(title_href)
+        generated.append(
+            XhtmlChapter(
+                id=title_id,
+                href=title_href,
+                title="Title Page",
+                body_xhtml=build_title_page_body(metadata),
+            )
+        )
+
+    if options.include_toc_page:
+        toc_id = unique_generated_value("table-of-contents", existing_ids)
+        existing_ids.add(toc_id)
+        toc_href = unique_generated_value(
+            "Text/table-of-contents.xhtml", existing_hrefs
+        )
+        generated.append(
+            XhtmlChapter(
+                id=toc_id,
+                href=toc_href,
+                title="Table of Contents",
+                body_xhtml=build_toc_page_body(
+                    content_chapters,
+                    toc_href=toc_href,
+                    include_page_numbers=options.toc_page_numbers,
+                ),
+            )
+        )
+
+    return [*generated, *content_chapters]
+
+
+def build_title_page_body(metadata: EpubMetadata) -> str:
+    """Build the generated reader-visible title page body."""
+
+    lines = [
+        '<section class="title-page" epub:type="titlepage">',
+        f"  <h1>{escape(metadata.title or 'Untitled')}</h1>",
+    ]
+    if metadata.description:
+        lines.append(f'  <p class="subtitle">{escape(metadata.description)}</p>')
+    creator_names = [author_name(author) for author in metadata.creators]
+    if creator_names:
+        lines.append(f'  <p class="creator">{escape(", ".join(creator_names))}</p>')
+    if metadata.publisher:
+        lines.append(f'  <p class="publisher">{escape(metadata.publisher)}</p>')
+    if metadata.date:
+        lines.append(f'  <p class="date">{escape(metadata.date)}</p>')
+    if metadata.rights:
+        lines.append(f'  <p class="rights">{escape(metadata.rights)}</p>')
+    lines.append("</section>")
+    return "\n".join(lines)
+
+
+def build_toc_page_body(
+    chapters: Sequence[XhtmlChapter],
+    *,
+    toc_href: str,
+    include_page_numbers: bool,
+) -> str:
+    """Build a generated reader-visible table of contents body."""
+
+    class_name = (
+        "reader-toc with-page-numbers" if include_page_numbers else "reader-toc"
+    )
+    chapter_lines = []
+    for chapter in chapters:
+        href = relative_href(toc_href, chapter.href)
+        chapter_lines.append(
+            f'    <li><a href="{escape(href)}">{escape(chapter.title)}</a></li>'
+        )
+    return (
+        f'<nav class="{class_name}" epub:type="toc">\n'
+        "  <h1>Table of Contents</h1>\n"
+        "  <ol>\n" + "\n".join(chapter_lines) + "\n  </ol>\n"
+        "</nav>"
+    )
+
+
+def author_name(author: object) -> str:
+    name = getattr(author, "name", None)
+    if isinstance(name, str):
+        return name
+    return str(author)
+
+
+def unique_generated_value(base: str, existing: set[str]) -> str:
+    if base not in existing:
+        return base
+    if "." in base:
+        stem, suffix = base.rsplit(".", 1)
+        suffix = f".{suffix}"
+    else:
+        stem, suffix = base, ""
+    index = 2
+    while True:
+        candidate = f"{stem}-{index}{suffix}"
+        if candidate not in existing:
+            return candidate
+        index += 1
+
+
 def create_epub(
     metadata: EpubMetadata,
     chapters: Sequence[XhtmlChapter],
@@ -128,9 +269,15 @@ def create_epub(
 
     resolved_options = options or BuildOptions()
     resolved_assets = list(assets or [])
-    identifier = resolve_identifier(metadata, chapters, resolved_options)
+    content_chapters = list(chapters)
+    identifier = resolve_identifier(metadata, content_chapters, resolved_options)
     resolved_metadata = replace(metadata, identifier=identifier)
     modified = modified_timestamp(resolved_options)
+    spine_chapters = compose_spine_chapters(
+        resolved_metadata,
+        content_chapters,
+        resolved_options,
+    )
 
     stylesheet_text = compose_stylesheet(resolved_options)
     stylesheet_present = bool(stylesheet_text)
@@ -140,8 +287,7 @@ def create_epub(
         PackageEntry(CONTAINER_ENTRY, container_xml().encode("utf-8")),
     ]
 
-    chapter_docs: list[XhtmlChapter] = []
-    for chapter in chapters:
+    for chapter in spine_chapters:
         stylesheet_href = None
         if stylesheet_present:
             stylesheet_href = relative_href(chapter.href, "Styles/book.css")
@@ -151,7 +297,6 @@ def create_epub(
             resolved_metadata.language or "en",
             stylesheet_href=stylesheet_href,
         )
-        chapter_docs.append(chapter)
         entry_name = f"OEBPS/{chapter.href}"
         generated_text_entries[entry_name] = chapter_document
         package_entries.append(
@@ -160,7 +305,7 @@ def create_epub(
 
     nav_document = build_nav_document(
         resolved_metadata.title,
-        chapter_docs,
+        content_chapters,
         resolved_metadata.language or "en",
     )
     generated_text_entries[NAV_ENTRY] = nav_document
@@ -169,7 +314,7 @@ def create_epub(
     if resolved_options.include_ncx:
         ncx_document = build_ncx_document(
             resolved_metadata.title,
-            chapter_docs,
+            content_chapters,
             identifier=identifier,
             language=resolved_metadata.language or "en",
         )
@@ -191,7 +336,7 @@ def create_epub(
 
     content_opf = build_content_opf(
         resolved_metadata,
-        chapter_docs,
+        spine_chapters,
         identifier=identifier,
         modified=modified,
         include_ncx=resolved_options.include_ncx,

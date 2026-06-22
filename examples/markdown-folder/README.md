@@ -8,6 +8,10 @@ single CLI command or the folder convenience API.
 
 - A book built from every `*.md` file in `manuscript/`, sorted by filename into
   spine order.
+- A generated title page and a generated reader-visible table of contents are
+  inserted before the Markdown chapters.
+- The TOC page requests automatic page numbers with CSS `target-counter()`;
+  unsupported readers still show normal linked entries.
 - YAML-like front matter in the first file (`00-front-matter.md`) drives the
   EPUB metadata. No metadata is passed on the command line.
 - The first `#` heading in each file becomes the chapter title.
@@ -19,7 +23,8 @@ From the repository root, with `text2epub` installed:
 
 ```bash
 text2epub markdown examples/markdown-folder/manuscript \
-  -o examples/markdown-folder/dist/book.epub
+  -o examples/markdown-folder/dist/book.epub \
+  --title-page --toc-page --toc-page-numbers
 ```
 
 The first file supplies the title, language, and other metadata, so the CLI
@@ -39,11 +44,16 @@ There is no `build.py` because the folder convenience API is one call:
 ```python
 from pathlib import Path
 
-from text2epub import create_epub_from_markdown_folder
+from text2epub import BuildOptions, create_epub_from_markdown_folder
 
 create_epub_from_markdown_folder(
     Path("examples/markdown-folder/manuscript"),
     Path("examples/markdown-folder/dist/book.epub"),
+    options=BuildOptions(
+        include_title_page=True,
+        include_toc_page=True,
+        toc_page_numbers=True,
+    ),
 )
 ```
 

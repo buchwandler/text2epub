@@ -26,6 +26,8 @@ release-checklist
 
 - Generate a new EPUB from one Markdown file.
 - Generate a new EPUB from a folder of Markdown chapters sorted by filename.
+- Add generated title and reader-visible contents pages to Markdown or XHTML builds.
+- Request automatic TOC page numbers for reading systems that support CSS paged-media counters.
 - Discover chapters from manuscript naming schemes such as `00-front-matter.md`,
   `01-introduction.md`, and `02-chapter.md`.
 - Build an EPUB from already-rendered XHTML chapter bodies.
@@ -39,7 +41,8 @@ release-checklist
 2. Keep output deterministic by default so builds are reproducible.
 3. Preserve source EPUB bytes for no-op and identity rebuilds.
 4. Fail closed when rebuild inputs are stale or unsafe.
-5. Keep the public API small enough for automation tools and scripts.
+5. Keep generated front matter optional so scripts can choose plain chapter-only output or book-like output.
+6. Keep the public API small enough for automation tools and scripts.
 
 ## Limits
 

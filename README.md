@@ -20,6 +20,8 @@ unchanged package entries.
 - create new EPUBs from a folder of ordered Markdown files
 - discover chapters from filename-based manuscript conventions
 - generate XHTML, OPF, NAV, NCX, CSS, and deterministic ZIP output
+- optionally add a generated title page and reader-visible contents page
+- request automatic TOC page numbers with CSS `target-counter()` for readers that support paged-media counters
 - package local image assets referenced by Markdown
 - support YAML-like front matter for common EPUB metadata
 - build EPUBs from explicit XHTML chapter bodies
@@ -72,18 +74,23 @@ Build it from Python with the convenience API:
 ```python
 from pathlib import Path
 
-from text2epub import create_epub_from_markdown_folder
+from text2epub import BuildOptions, create_epub_from_markdown_folder
 
 create_epub_from_markdown_folder(
     Path("manuscript"),
     Path("book.epub"),
+    options=BuildOptions(
+        include_title_page=True,
+        include_toc_page=True,
+        toc_page_numbers=True,
+    ),
 )
 ```
 
 Or build the same folder from the CLI:
 
 ```bash
-text2epub markdown manuscript/ -o book.epub
+text2epub markdown manuscript/ -o book.epub --title-page --toc-page --toc-page-numbers
 ```
 
 ## Explicit Python API
@@ -94,12 +101,13 @@ chapter list and order:
 ```python
 from pathlib import Path
 
-from text2epub import EpubMetadata, create_epub_from_markdown_files
+from text2epub import BuildOptions, EpubMetadata, create_epub_from_markdown_files
 
 create_epub_from_markdown_files(
     [Path("01-introduction.md"), Path("02-body.md")],
     Path("book.epub"),
     metadata=EpubMetadata(title="Example Book", language="en"),
+    options=BuildOptions(include_title_page=True, include_toc_page=True),
 )
 ```
 
@@ -153,6 +161,7 @@ print(report.changed_entries)
 ```bash
 text2epub markdown INPUT.md -o OUTPUT.epub
 text2epub markdown CHAPTER_DIR -o OUTPUT.epub --title "Book" --language en
+text2epub markdown CHAPTER_DIR -o OUTPUT.epub --title-page --toc-page --toc-page-numbers
 text2epub rebuild SOURCE.epub MANIFEST.json REPLACEMENTS.json -o OUTPUT.epub
 text2epub validate OUTPUT.epub
 text2epub version
@@ -168,3 +177,11 @@ python -m sphinx -b html docs docs/_build/html
 ```
 
 Start with `docs/index.md` for the user guide and `docs/release-checklist.md` for release validation.
+
+## Page numbers in EPUB readers
+
+EPUB files do not contain universal static page numbers. When `toc_page_numbers=True`
+or `--toc-page-numbers` is used, `text2epub` writes CSS using `target-counter()`
+on the generated contents page. Reading systems with paged-media counter support
+can fill those numbers automatically; other readers still display the linked
+contents entries without page numbers.

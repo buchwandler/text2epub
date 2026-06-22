@@ -43,3 +43,57 @@ def test_create_epub_from_xhtml_chapters(tmp_path: Path) -> None:
     )
 
     assert output.exists()
+
+
+def test_generated_title_and_toc_pages_are_in_spine(tmp_path: Path) -> None:
+    first = tmp_path / "01-first.md"
+    second = tmp_path / "02-second.md"
+    first.write_text("# First\n\nAlpha.\n", encoding="utf-8")
+    second.write_text("# Second\n\nBeta.\n", encoding="utf-8")
+    output = tmp_path / "book.epub"
+
+    create_epub_from_markdown(
+        MarkdownBook(
+            metadata=EpubMetadata(
+                title="Example",
+                language="en",
+                creators=["Ada Lovelace"],
+                publisher="Example Press",
+                date="2026-06-22",
+            ),
+            chapters=[MarkdownChapter(path=first), MarkdownChapter(path=second)],
+            options=BuildOptions(
+                deterministic=True,
+                include_title_page=True,
+                include_toc_page=True,
+                toc_page_numbers=True,
+            ),
+        ),
+        output,
+    )
+
+    import zipfile
+
+    with zipfile.ZipFile(output) as archive:
+        names = archive.namelist()
+        content_opf = archive.read("OEBPS/content.opf").decode("utf-8")
+        title_page = archive.read("OEBPS/Text/title-page.xhtml").decode("utf-8")
+        toc_page = archive.read("OEBPS/Text/table-of-contents.xhtml").decode("utf-8")
+        nav_page = archive.read("OEBPS/nav.xhtml").decode("utf-8")
+        stylesheet = archive.read("OEBPS/Styles/book.css").decode("utf-8")
+
+    assert "OEBPS/Text/title-page.xhtml" in names
+    assert "OEBPS/Text/table-of-contents.xhtml" in names
+    assert content_opf.index('idref="title-page"') < content_opf.index(
+        'idref="table-of-contents"'
+    )
+    assert content_opf.index('idref="table-of-contents"') < content_opf.index(
+        'idref="chapter-001"'
+    )
+    assert "Ada Lovelace" in title_page
+    assert "with-page-numbers" in toc_page
+    assert "target-counter" in stylesheet
+    assert "title-page.xhtml" not in nav_page
+    assert "table-of-contents.xhtml" not in nav_page
+    assert "First" in nav_page
+    assert "Second" in nav_page

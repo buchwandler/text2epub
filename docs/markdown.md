@@ -23,11 +23,16 @@ order:
 ```python
 from pathlib import Path
 
-from text2epub import create_epub_from_markdown_folder
+from text2epub import BuildOptions, create_epub_from_markdown_folder
 
 create_epub_from_markdown_folder(
     Path("manuscript"),
     Path("book.epub"),
+    options=BuildOptions(
+        include_title_page=True,
+        include_toc_page=True,
+        toc_page_numbers=True,
+    ),
 )
 ```
 
@@ -52,11 +57,36 @@ directories, direct `*.md` children are sorted by filename and used as spine
 order.
 
 ```bash
-text2epub markdown manuscript/ -o book.epub --title "Book" --language en
+text2epub markdown manuscript/ -o book.epub --title "Book" --language en --title-page --toc-page --toc-page-numbers
 ```
 
 The Python folder helper exposes the same default. Set `recursive=True` when you
 want matching files below nested folders sorted by relative path.
+
+## Generated title and contents pages
+
+The EPUB package always includes the EPUB NAV document for reading-system
+navigation. For book-like manuscripts you can also insert reader-visible pages
+into the spine:
+
+```python
+from text2epub import BuildOptions
+
+options = BuildOptions(
+    include_title_page=True,
+    include_toc_page=True,
+    toc_page_numbers=True,
+)
+```
+
+The generated title page uses metadata such as title, description, creators,
+publisher, date, and rights. The generated contents page links to the Markdown
+chapters, not to the generated front-matter pages.
+
+`toc_page_numbers=True` writes CSS using `target-counter(attr(href), page)`. This
+requests automatic page numbers from reading systems that support paged-media
+counters. EPUB readers without that support keep the TOC links but omit the page
+numbers.
 
 ## Front matter
 

@@ -19,8 +19,9 @@ def render_xhtml_document(
     escaped_language = escape(language or "en")
     return (
         '<?xml version="1.0" encoding="utf-8"?>\n'
-        f'<html xmlns="http://www.w3.org/1999/xhtml" lang="{escaped_language}" '
-        f'xml:lang="{escaped_language}">\n'
+        f'<html xmlns="http://www.w3.org/1999/xhtml" '
+        'xmlns:epub="http://www.idpf.org/2007/ops" '
+        f'lang="{escaped_language}" xml:lang="{escaped_language}">\n'
         "<head>\n"
         f"  <title>{escaped_title}</title>\n"
         f"{stylesheet}"

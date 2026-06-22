@@ -115,3 +115,39 @@ def test_cli_validate_missing_file_reports_clean_error(tmp_path: Path) -> None:
     assert result.returncode != 0
     assert "Traceback" not in result.stderr
     assert "missing.epub" in result.stderr
+
+
+def test_cli_markdown_generates_title_and_toc_pages(tmp_path: Path) -> None:
+    manuscript = tmp_path / "manuscript"
+    manuscript.mkdir()
+    (manuscript / "01-first.md").write_text("# First\n\nAlpha.\n", encoding="utf-8")
+    (manuscript / "02-second.md").write_text("# Second\n\nBeta.\n", encoding="utf-8")
+    output = tmp_path / "book.epub"
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "text2epub",
+            "markdown",
+            str(manuscript),
+            "-o",
+            str(output),
+            "--title",
+            "Example",
+            "--title-page",
+            "--toc-page",
+            "--toc-page-numbers",
+        ],
+        check=True,
+    )
+
+    import zipfile
+
+    with zipfile.ZipFile(output) as archive:
+        names = archive.namelist()
+        stylesheet = archive.read("OEBPS/Styles/book.css").decode("utf-8")
+
+    assert "OEBPS/Text/title-page.xhtml" in names
+    assert "OEBPS/Text/table-of-contents.xhtml" in names
+    assert "target-counter" in stylesheet
