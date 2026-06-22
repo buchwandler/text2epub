@@ -1,3 +1,8 @@
+[![PyPI - Version](https://img.shields.io/pypi/v/text2epub)](https://pypi.org/project/text2epub/)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/text2epub)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/text2epub)
+[![codecov](https://codecov.io/gh/holgern/text2epub/graph/badge.svg?token=qd3VBCOQZd)](https://codecov.io/gh/holgern/text2epub)
+
 # text2epub
 
 `text2epub` is a typed Python library for two EPUB output workflows:
