@@ -3,9 +3,9 @@ from __future__ import annotations
 import mimetypes
 import posixpath
 import re
-from typing import cast
 from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
+from typing import cast
 
 from lxml import etree
 from lxml import html as lxml_html
