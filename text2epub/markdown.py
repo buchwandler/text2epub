@@ -3,6 +3,7 @@ from __future__ import annotations
 import mimetypes
 import posixpath
 import re
+from typing import cast
 from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 
@@ -300,19 +301,21 @@ def validate_rendered_xhtml_tree(root: etree._Element, *, chapter_path: Path) ->
                 f"Chapter {chapter_path} contains unsupported XHTML tag {local_name!r}."
             )
         for raw_attribute_name, value in element.attrib.items():
-            local_attr = attribute_name(raw_attribute_name)
+            name = cast("str", raw_attribute_name)
+            text_value = cast("str", value)
+            local_attr = attribute_name(name)
             if local_attr.startswith("on"):
                 raise BuildError(
                     f"Chapter {chapter_path} contains unsafe event handler "
                     f"attribute {local_attr!r}."
                 )
-            if local_attr in {"href", "src"} and value.strip().lower().startswith(
+            if local_attr in {"href", "src"} and text_value.strip().lower().startswith(
                 "javascript:"
             ):
                 raise BuildError(
                     f"Chapter {chapter_path} contains unsafe javascript URL."
                 )
-            if is_allowed_rendered_attribute(local_name, local_attr, value):
+            if is_allowed_rendered_attribute(local_name, local_attr, text_value):
                 continue
             raise BuildError(
                 f"Chapter {chapter_path} contains unsupported attribute "
