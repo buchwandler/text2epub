@@ -327,3 +327,147 @@ def test_create_epub_from_markdown_folder(tmp_path: Path) -> None:
     assert "<dc:creator>Ada Lovelace</dc:creator>" in content_opf
     assert "Alpha." in first
     assert "Beta." in second
+
+
+def test_markdown_escapes_inline_xhtml_by_default(tmp_path: Path) -> None:
+    chapter = tmp_path / "chapter.md"
+    chapter.write_text("# Inline\n\nThis is <em>escaped</em>.\n", encoding="utf-8")
+    output = tmp_path / "book.epub"
+
+    create_epub_from_markdown(
+        MarkdownBook(
+            metadata=EpubMetadata(title="Example"),
+            chapters=[MarkdownChapter(path=chapter)],
+        ),
+        output,
+    )
+
+    with zipfile.ZipFile(output) as archive:
+        chapter_text = archive.read("OEBPS/Text/chapter-001.xhtml").decode("utf-8")
+
+    assert "&lt;em&gt;escaped&lt;/em&gt;" in chapter_text
+    assert "<em>escaped</em>" not in chapter_text
+
+
+def test_markdown_allows_safe_inline_xhtml_when_enabled(tmp_path: Path) -> None:
+    chapter = tmp_path / "chapter.md"
+    chapter.write_text(
+        '# Inline\n\nThis is <em class="voice">preserved</em>, '
+        "<strong>strong</strong>, <span>span</span>, "
+        '<a href="chapter.xhtml#target">link</a>, '
+        "line<br/>break, <sup>sup</sup>, and <sub>sub</sub>.\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "book.epub"
+
+    create_epub_from_markdown(
+        MarkdownBook(
+            metadata=EpubMetadata(title="Example"),
+            chapters=[MarkdownChapter(path=chapter)],
+            options=BuildOptions(allow_inline_xhtml=True),
+        ),
+        output,
+    )
+
+    with zipfile.ZipFile(output) as archive:
+        chapter_text = archive.read("OEBPS/Text/chapter-001.xhtml").decode("utf-8")
+
+    assert '<em class="voice">preserved</em>' in chapter_text
+    assert "<strong>strong</strong>" in chapter_text
+    assert "<span>span</span>" in chapter_text
+    assert '<a href="chapter.xhtml#target">link</a>' in chapter_text
+    assert "line<br/>break" in chapter_text
+    assert "<sup>sup</sup>" in chapter_text
+    assert "<sub>sub</sub>" in chapter_text
+
+
+def test_markdown_rejects_unsafe_inline_xhtml_when_enabled(tmp_path: Path) -> None:
+    chapter = tmp_path / "chapter.md"
+    chapter.write_text(
+        '# Inline\n\nThis is <span onclick="evil()">unsafe</span>.\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(BuildError):
+        create_epub_from_markdown(
+            MarkdownBook(
+                metadata=EpubMetadata(title="Example"),
+                chapters=[MarkdownChapter(path=chapter)],
+                options=BuildOptions(allow_inline_xhtml=True),
+            ),
+            tmp_path / "book.epub",
+        )
+
+
+def test_markdown_rejects_raw_block_xhtml_when_enabled(tmp_path: Path) -> None:
+    chapter = tmp_path / "chapter.md"
+    chapter.write_text("# Inline\n\n<div>raw block</div>\n", encoding="utf-8")
+
+    with pytest.raises(BuildError):
+        create_epub_from_markdown(
+            MarkdownBook(
+                metadata=EpubMetadata(title="Example"),
+                chapters=[MarkdownChapter(path=chapter)],
+                options=BuildOptions(allow_inline_xhtml=True),
+            ),
+            tmp_path / "book.epub",
+        )
+
+
+def test_markdown_rejects_malformed_inline_xhtml_when_enabled(tmp_path: Path) -> None:
+    chapter = tmp_path / "chapter.md"
+    chapter.write_text("# Inline\n\nThis is <em>unclosed.\n", encoding="utf-8")
+
+    with pytest.raises(BuildError):
+        create_epub_from_markdown(
+            MarkdownBook(
+                metadata=EpubMetadata(title="Example"),
+                chapters=[MarkdownChapter(path=chapter)],
+                options=BuildOptions(allow_inline_xhtml=True),
+            ),
+            tmp_path / "book.epub",
+        )
+
+
+def test_markdown_rejects_raw_inline_img_when_enabled(tmp_path: Path) -> None:
+    chapter = tmp_path / "chapter.md"
+    chapter.write_text(
+        '# Inline\n\nThis is <img src="image.png" alt="raw"/> inline.\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(BuildError):
+        create_epub_from_markdown(
+            MarkdownBook(
+                metadata=EpubMetadata(title="Example"),
+                chapters=[MarkdownChapter(path=chapter)],
+                options=BuildOptions(allow_inline_xhtml=True),
+            ),
+            tmp_path / "book.epub",
+        )
+
+
+def test_markdown_allows_inline_xhtml_namespaced_attributes(
+    tmp_path: Path,
+) -> None:
+    chapter = tmp_path / "chapter.md"
+    chapter.write_text(
+        "# Inline\n\nThis is "
+        '<span xml:lang="fr" epub:type="z3998:verse">texte</span>.\n',
+        encoding="utf-8",
+    )
+    output = tmp_path / "book.epub"
+
+    create_epub_from_markdown(
+        MarkdownBook(
+            metadata=EpubMetadata(title="Example"),
+            chapters=[MarkdownChapter(path=chapter)],
+            options=BuildOptions(allow_inline_xhtml=True),
+        ),
+        output,
+    )
+
+    with zipfile.ZipFile(output) as archive:
+        chapter_text = archive.read("OEBPS/Text/chapter-001.xhtml").decode("utf-8")
+
+    assert '<span xml:lang="fr" epub:type="z3998:verse">texte</span>' in chapter_text

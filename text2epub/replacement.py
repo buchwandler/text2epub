@@ -6,40 +6,13 @@ import zipfile
 from collections import defaultdict
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, cast
-
-from lxml import etree
+from typing import Any
 
 from .errors import ReplacementError, UnsafeFragmentError
+from .inline_xhtml import validate_inline_fragment as validate_safe_inline_fragment
 from .models import Replacement, ReplacementPlan, ReplacementReport
 from .package import coerce_path, copy_epub, rewrite_epub, validate_epub_package
 from .validation import ensure_no_unresolved_tokens, sha256_bytes, sha256_path
-
-ALLOWED_INLINE_TAGS = {
-    "a",
-    "em",
-    "strong",
-    "span",
-    "i",
-    "b",
-    "u",
-    "small",
-    "sup",
-    "sub",
-    "br",
-    "code",
-    "kbd",
-    "samp",
-    "var",
-}
-ALLOWED_INLINE_ATTRIBUTES = {
-    "class",
-    "href",
-    "id",
-    "lang",
-    "title",
-    "xml:lang",
-}
 
 
 def rebuild_epub(plan: ReplacementPlan, output_path: Path | str) -> ReplacementReport:
@@ -288,43 +261,14 @@ def render_replacement_text(
 
 
 def validate_inline_fragment(fragment: str, *, block_id: str, mode: str) -> None:
-    wrapper = f'<root xmlns="http://www.w3.org/1999/xhtml">{fragment}</root>'
     try:
-        parser = etree.XMLParser(resolve_entities=False, no_network=True)
-        root = etree.fromstring(wrapper.encode("utf-8"), parser=parser)
-    except etree.XMLSyntaxError as exc:
-        raise UnsafeFragmentError(
-            f"Replacement block {block_id} contains malformed inline XHTML."
-        ) from exc
-    for element in root.iter():
-        if element is root:
-            continue
-        local_name = etree.QName(element.tag).localname
-        if local_name not in ALLOWED_INLINE_TAGS:
-            raise UnsafeFragmentError(
-                f"Replacement block {block_id} contains forbidden tag "
-                f"{local_name!r} for mode {mode!r}."
-            )
-        for attribute_name, value in element.attrib.items():
-            name = cast("str", attribute_name)
-            text_value = cast("str", value)
-            local_attr = _attribute_name(name)
-            if local_attr.startswith("on"):
-                raise UnsafeFragmentError(
-                    f"Replacement block {block_id} contains forbidden event "
-                    f"handler attribute {local_attr!r}."
-                )
-            if local_attr not in ALLOWED_INLINE_ATTRIBUTES:
-                raise UnsafeFragmentError(
-                    f"Replacement block {block_id} contains forbidden attribute "
-                    f"{local_attr!r}."
-                )
-            if local_attr == "href" and text_value.strip().lower().startswith(
-                "javascript:"
-            ):
-                raise UnsafeFragmentError(
-                    f"Replacement block {block_id} contains forbidden javascript href."
-                )
+        validate_safe_inline_fragment(
+            fragment,
+            context=f"Replacement block {block_id}",
+            mode=mode,
+        )
+    except UnsafeFragmentError:
+        raise
 
 
 def is_identity_replacement(
@@ -365,8 +309,3 @@ def apply_changes(original: str, changes: list[tuple[int, int, str, str]]) -> st
         updated = updated[:start] + replacement_text + updated[end:]
     return updated
 
-
-def _attribute_name(attribute_name: str) -> str:
-    if attribute_name.startswith("{http://www.w3.org/XML/1998/namespace}"):
-        return "xml:lang"
-    return attribute_name.rsplit("}", 1)[-1]

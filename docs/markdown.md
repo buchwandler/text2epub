@@ -138,7 +138,26 @@ Remote images are rejected by default. Set `allow_remote_resources=True` in
 external. External resources may not be accepted by all stores or reading
 systems.
 
-## Links and raw HTML
+## Links and safe inline XHTML
 
-Raw HTML in Markdown is disabled. Links with `javascript:` URLs are rejected.
+Raw HTML in Markdown is escaped by default. Links with `javascript:` URLs are rejected.
 Other links are escaped during XHTML serialization.
+
+Enable safe inline XHTML when your Markdown text intentionally contains EPUB-safe
+phrasing markup, for example from an `epub2text` structured fragment export:
+
+```python
+from text2epub import BuildOptions
+
+options = BuildOptions(allow_inline_xhtml=True)
+```
+
+```bash
+text2epub markdown manuscript/ -o book.epub --allow-inline-xhtml
+```
+
+With this option, Markdown such as `This is <em>important</em>.` is emitted as
+inline XHTML instead of escaped text. The builder rejects raw block XHTML, scripts,
+event handler attributes, and `javascript:` links. Use Markdown syntax for block
+structure and reserve raw XHTML for inline phrasing tags such as `<em>`,
+`<strong>`, `<span>`, `<a>`, `<code>`, `<sup>`, and `<sub>`.

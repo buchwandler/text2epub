@@ -10,7 +10,14 @@ from lxml import etree
 from lxml import html as lxml_html
 from markdown_it import MarkdownIt
 
-from .errors import BuildError
+from .errors import BuildError, UnsafeFragmentError
+from .inline_xhtml import (
+    ALLOWED_INLINE_TAGS,
+    attribute_name,
+)
+from .inline_xhtml import (
+    validate_inline_fragment as validate_safe_inline_fragment,
+)
 from .models import (
     BuildOptions,
     EpubMetadata,
@@ -18,8 +25,6 @@ from .models import (
     MarkdownChapter,
     XhtmlChapter,
 )
-
-MARKDOWN_PARSER = MarkdownIt("commonmark", {"html": False}).enable("table")
 
 
 @dataclass(slots=True)
@@ -107,6 +112,7 @@ def prepare_markdown_book(book: MarkdownBook) -> RenderedMarkdownBook:
             chapter_href=chapter_href,
             asset_registry=asset_registry,
             allow_remote_resources=book.options.allow_remote_resources,
+            allow_inline_xhtml=book.options.allow_inline_xhtml,
         )
         chapter_title = (
             chapter.title
@@ -154,8 +160,14 @@ def render_markdown_body(
     chapter_href: str,
     asset_registry: dict[Path, RenderedAsset],
     allow_remote_resources: bool,
+    allow_inline_xhtml: bool,
 ) -> tuple[str, str | None]:
-    rendered_html = MARKDOWN_PARSER.render(markdown_text)
+    parser = markdown_parser(allow_inline_xhtml=allow_inline_xhtml)
+    if allow_inline_xhtml:
+        validate_raw_xhtml_tokens(
+            markdown_text, parser=parser, chapter_path=chapter_path
+        )
+    rendered_html = parser.render(markdown_text)
     root = lxml_html.fragment_fromstring(
         rendered_html or "<p></p>", create_parent="div"
     )
@@ -211,10 +223,119 @@ def render_markdown_body(
                     f"Chapter {chapter_path} contains unsafe javascript link {href!r}."
                 )
 
+    if allow_inline_xhtml:
+        validate_rendered_xhtml_tree(root, chapter_path=chapter_path)
+
     body_xhtml = "".join(
         etree.tostring(child, encoding="unicode", method="xml") for child in root
     )
     return body_xhtml, discovered_title
+
+
+def markdown_parser(*, allow_inline_xhtml: bool) -> MarkdownIt:
+    return MarkdownIt("commonmark", {"html": allow_inline_xhtml}).enable("table")
+
+
+def validate_raw_xhtml_tokens(
+    markdown_text: str, *, parser: MarkdownIt, chapter_path: Path
+) -> None:
+    for token in parser.parse(markdown_text):
+        if token.type == "html_block":
+            raise BuildError(
+                f"Chapter {chapter_path} contains raw block XHTML, which is not "
+                "supported. Use Markdown for blocks and --allow-inline-xhtml only "
+                "for safe inline tags such as <em>, <strong>, <span>, and <a>."
+            )
+        if token.type != "inline" or token.children is None:
+            continue
+        raw_inline = "".join(
+            child.content for child in token.children if child.type == "html_inline"
+        )
+        if not raw_inline:
+            continue
+        try:
+            validate_safe_inline_fragment(
+                raw_inline,
+                context=f"Chapter {chapter_path}",
+                mode="markdown_inline",
+            )
+        except UnsafeFragmentError as exc:
+            raise BuildError(str(exc)) from exc
+
+
+def validate_rendered_xhtml_tree(root: etree._Element, *, chapter_path: Path) -> None:
+    allowed_structural_tags = {
+        "blockquote",
+        "code",
+        "dd",
+        "dl",
+        "dt",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "hr",
+        "img",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "table",
+        "tbody",
+        "td",
+        "th",
+        "thead",
+        "tr",
+        "ul",
+    }
+    allowed_tags = allowed_structural_tags | set(ALLOWED_INLINE_TAGS)
+    for element in root.iter():
+        local_name = _local_name(element.tag)
+        if local_name is None or local_name == "div":
+            continue
+        if local_name not in allowed_tags:
+            raise BuildError(
+                f"Chapter {chapter_path} contains unsupported XHTML tag "
+                f"{local_name!r}."
+            )
+        for raw_attribute_name, value in element.attrib.items():
+            local_attr = attribute_name(raw_attribute_name)
+            if local_attr.startswith("on"):
+                raise BuildError(
+                    f"Chapter {chapter_path} contains unsafe event handler "
+                    f"attribute {local_attr!r}."
+                )
+            if local_attr in {"href", "src"} and value.strip().lower().startswith(
+                "javascript:"
+            ):
+                raise BuildError(
+                    f"Chapter {chapter_path} contains unsafe javascript URL."
+                )
+            if is_allowed_rendered_attribute(local_name, local_attr, value):
+                continue
+            raise BuildError(
+                f"Chapter {chapter_path} contains unsupported attribute "
+                f"{local_attr!r} on <{local_name}>."
+            )
+
+
+def is_allowed_rendered_attribute(tag: str, attr: str, value: str) -> bool:
+    if attr in {"class", "dir", "epub:type", "id", "lang", "title", "xml:lang"}:
+        return True
+    if tag == "a" and attr == "href":
+        return True
+    if tag == "img" and attr in {"alt", "src", "title"}:
+        return True
+    if tag == "ol" and attr == "start":
+        return True
+    if tag in {"td", "th"} and attr == "style":
+        return (
+            re.fullmatch(r"text-align\s*:\s*(left|right|center)", value)
+            is not None
+        )
+    return False
 
 
 def merge_metadata(

@@ -57,6 +57,14 @@ def build_parser() -> argparse.ArgumentParser:
     markdown_parser.add_argument("--non-deterministic", action="store_true")
     markdown_parser.add_argument("--allow-remote-resources", action="store_true")
     markdown_parser.add_argument(
+        "--allow-inline-xhtml",
+        action="store_true",
+        help=(
+            "preserve safe inline XHTML tags such as <em> and <strong> "
+            "in Markdown input"
+        ),
+    )
+    markdown_parser.add_argument(
         "--title-page",
         action="store_true",
         help="add a generated reader-visible title page to the EPUB spine",
@@ -110,6 +118,7 @@ def handle_markdown(args: argparse.Namespace) -> int:
         include_ncx=not args.no_ncx,
         deterministic=not args.non_deterministic,
         allow_remote_resources=args.allow_remote_resources,
+        allow_inline_xhtml=args.allow_inline_xhtml,
         include_title_page=args.title_page,
         include_toc_page=args.toc_page,
         toc_page_numbers=args.toc_page_numbers,

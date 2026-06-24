@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 from .helpers import create_manifest_for_fragment, create_test_epub, write_manifest
@@ -40,6 +41,33 @@ def test_cli_markdown_builds_epub(tmp_path: Path) -> None:
     )
 
     assert output.exists()
+
+
+def test_cli_markdown_allows_inline_xhtml(tmp_path: Path) -> None:
+    chapter = tmp_path / "chapter.md"
+    chapter.write_text("# Hello\n\nThis is <em>kept</em>.\n", encoding="utf-8")
+    output = tmp_path / "book.epub"
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "text2epub",
+            "markdown",
+            str(chapter),
+            "-o",
+            str(output),
+            "--title",
+            "Example",
+            "--allow-inline-xhtml",
+        ],
+        check=True,
+    )
+
+    with zipfile.ZipFile(output) as archive:
+        chapter_text = archive.read("OEBPS/Text/chapter-001.xhtml").decode("utf-8")
+
+    assert "<em>kept</em>" in chapter_text
 
 
 def test_cli_rebuild_json_report(tmp_path: Path) -> None:
@@ -141,8 +169,6 @@ def test_cli_markdown_generates_title_and_toc_pages(tmp_path: Path) -> None:
         ],
         check=True,
     )
-
-    import zipfile
 
     with zipfile.ZipFile(output) as archive:
         names = archive.namelist()

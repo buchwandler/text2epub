@@ -23,6 +23,7 @@ unchanged package entries.
 - optionally add a generated title page and reader-visible contents page
 - request automatic TOC page numbers with CSS `target-counter()` for readers that support paged-media counters
 - package local image assets referenced by Markdown
+- optionally preserve safe inline XHTML in Markdown, such as `<em>`, `<strong>`, `<span>`, and `<a>`
 - support YAML-like front matter for common EPUB metadata
 - build EPUBs from explicit XHTML chapter bodies
 - safely rebuild existing EPUBs from extraction manifests and replacement plans
@@ -133,6 +134,30 @@ book = MarkdownBook(
 create_epub_from_markdown(book, Path("book.epub"))
 ```
 
+
+## Safe inline XHTML in Markdown
+
+Raw HTML is escaped by default. When your source text comes from `epub2text`
+structured fragment export or another trusted pipeline, enable safe inline XHTML
+to preserve phrasing markup inside Markdown paragraphs:
+
+```markdown
+This keeps <em>emphasis</em> and <strong>strength</strong>.
+```
+
+```python
+from text2epub import BuildOptions
+
+options = BuildOptions(allow_inline_xhtml=True)
+```
+
+```bash
+text2epub markdown manuscript/ -o book.epub --allow-inline-xhtml
+```
+
+Only safe inline tags are accepted. Raw block HTML and unsafe attributes such as
+`onclick` are rejected.
+
 ## Rebuild API
 
 ```python
@@ -162,6 +187,7 @@ print(report.changed_entries)
 text2epub markdown INPUT.md -o OUTPUT.epub
 text2epub markdown CHAPTER_DIR -o OUTPUT.epub --title "Book" --language en
 text2epub markdown CHAPTER_DIR -o OUTPUT.epub --title-page --toc-page --toc-page-numbers
+text2epub markdown CHAPTER_DIR -o OUTPUT.epub --allow-inline-xhtml
 text2epub rebuild SOURCE.epub MANIFEST.json REPLACEMENTS.json -o OUTPUT.epub
 text2epub validate OUTPUT.epub
 text2epub version

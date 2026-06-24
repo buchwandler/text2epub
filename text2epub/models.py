@@ -45,6 +45,7 @@ class BuildOptions:
     )
     include_default_css: bool = True
     allow_remote_resources: bool = False
+    allow_inline_xhtml: bool = False
     include_title_page: bool = False
     include_toc_page: bool = False
     toc_page_numbers: bool = False

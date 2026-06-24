@@ -112,3 +112,22 @@ EPUB NAV file is still generated separately for reader navigation.
 `toc_page_numbers=True` requests automatic page numbers in the generated TOC page
 using CSS `target-counter()`. EPUB readers do not share one universal page model,
 so unsupported readers will show the linked entries without page numbers.
+
+
+## Safe inline XHTML
+
+By default, raw HTML in Markdown is escaped. Enable safe inline XHTML when source
+paragraphs intentionally contain EPUB-safe inline tags:
+
+```bash
+text2epub markdown manuscript/ -o example.epub --allow-inline-xhtml
+```
+
+```python
+from text2epub import BuildOptions
+
+options = BuildOptions(allow_inline_xhtml=True)
+```
+
+This preserves `This is <em>important</em>.` as XHTML. Raw block XHTML, scripts,
+event handler attributes, and `javascript:` links are rejected.

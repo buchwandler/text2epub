@@ -14,6 +14,7 @@ Prints the package version reported by `text2epub._version`.
 text2epub markdown INPUT.md -o OUTPUT.epub
 text2epub markdown CHAPTER_DIR -o OUTPUT.epub --title "Book" --language en
 text2epub markdown CHAPTER_DIR -o OUTPUT.epub --title-page --toc-page --toc-page-numbers
+text2epub markdown CHAPTER_DIR -o OUTPUT.epub --allow-inline-xhtml
 ```
 
 When `CHAPTER_DIR` is a directory, direct `*.md` children are sorted by filename
@@ -32,6 +33,7 @@ Options:
 - `--no-ncx`: omit the EPUB 2 NCX table of contents file.
 - `--non-deterministic`: use fresh UUID/timestamps instead of deterministic output.
 - `--allow-remote-resources`: allow remote image URLs to remain external.
+- `--allow-inline-xhtml`: preserve safe inline XHTML such as `<em>`, `<strong>`, `<span>`, and `<a>` in Markdown text. Raw block XHTML and unsafe attributes are rejected.
 - `--title-page`: insert a generated reader-visible title page before the Markdown chapters.
 - `--toc-page`: insert a generated reader-visible table of contents page after the title page, or first when no title page is requested.
 - `--toc-page-numbers`: request automatic TOC page numbers with CSS `target-counter()` on the generated TOC page. Unsupported readers still show linked TOC entries.
