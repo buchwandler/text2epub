@@ -47,6 +47,20 @@
   {
     "audience": null,
     "breaking": false,
+    "entry_id": "entry-0001",
+    "internal": false,
+    "kind": "added",
+    "order": 1,
+    "record_revision": 1,
+    "release_version": "v0.1.3",
+    "scopes": [],
+    "source_refs": ["git:cbfd2420fde951858fd6879485786fdad1d0de05"],
+    "status": "accepted",
+    "summary": "Added EPUB output rewrite support for changing language, metadata, and performing text replacements"
+  },
+  {
+    "audience": null,
+    "breaking": false,
     "entry_id": "entry-0002",
     "internal": false,
     "kind": "added",
@@ -93,6 +107,20 @@
   {
     "audience": null,
     "breaking": false,
+    "entry_id": "entry-0002",
+    "internal": true,
+    "kind": "changed",
+    "order": 2,
+    "record_revision": 1,
+    "release_version": "v0.1.3",
+    "scopes": [],
+    "source_refs": ["git:9e50e93dd902ad5bfab27e038baf4f47ca4e9a2e"],
+    "status": "accepted",
+    "summary": "Applied pre-commit fixes across test and source modules"
+  },
+  {
+    "audience": null,
+    "breaking": false,
     "entry_id": "entry-0003",
     "internal": false,
     "kind": "changed",
@@ -103,6 +131,20 @@
     "source_refs": ["git:1694751b687b712f16d9b1777b98470ca585d95d"],
     "status": "accepted",
     "summary": "License changed from AGPL-3.0 to MIT"
+  },
+  {
+    "audience": null,
+    "breaking": false,
+    "entry_id": "entry-0003",
+    "internal": false,
+    "kind": "fixed",
+    "order": 3,
+    "record_revision": 1,
+    "release_version": "v0.1.3",
+    "scopes": [],
+    "source_refs": ["git:4a8013640a67603b2f79d615ee2a0f2fb5c39d86"],
+    "status": "accepted",
+    "summary": "Fixed test compatibility for Windows platform"
   },
   {
     "audience": null,
