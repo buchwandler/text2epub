@@ -943,7 +943,7 @@ def test_external_entity_and_network_resolution_disabled(tmp_path: Path) -> None
     doc = (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         "<!DOCTYPE html [\n"
-        f'  <!ENTITY xxe SYSTEM "file://{secret_path}">\n'
+        f'  <!ENTITY xxe SYSTEM "{secret_path.as_uri()}">\n'
         "]>\n"
         '<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">\n'
         "<head><title>T</title></head>\n"
