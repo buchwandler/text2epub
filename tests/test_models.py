@@ -100,9 +100,7 @@ def test_replacement_report_accepts_output_rewrite() -> None:
 def test_replacement_report_positional_construction_stays_compatible() -> None:
     # Positional construction with the original five fields must keep working
     # even though output_rewrite was added with a default.
-    report = ReplacementReport(
-        Path("out.epub"), ["a"], ["b"], 1, 0
-    )
+    report = ReplacementReport(Path("out.epub"), ["a"], ["b"], 1, 0)
     assert report.output_path == Path("out.epub")
     assert report.changed_entries == ["a"]
     assert report.unchanged_entries == ["b"]

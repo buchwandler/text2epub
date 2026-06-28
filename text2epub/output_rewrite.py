@@ -180,8 +180,7 @@ def resolve_content_targets(
                 )
             if not is_xhtml_media_type(item.media_type):
                 raise ValidationError(
-                    f"Extraction manifest href {href!r} is not an XHTML "
-                    "manifest item."
+                    f"Extraction manifest href {href!r} is not an XHTML manifest item."
                 )
             candidates.append(href)
 
@@ -270,8 +269,7 @@ def _validate_explicit_target(
         )
     if not is_xhtml_media_type(item.media_type):
         raise ValidationError(
-            f"Explicit content href {href!r} resolves to non-XHTML target "
-            f"{resolved!r}."
+            f"Explicit content href {href!r} resolves to non-XHTML target {resolved!r}."
         )
 
 
@@ -283,9 +281,7 @@ def _dedupe_preserve_archive_order(
     return sorted(unique, key=package.archive_order)
 
 
-def _patch_opf_language(
-    opf_bytes: bytes, *, new_language: str, opf_path: str
-) -> bytes:
+def _patch_opf_language(opf_bytes: bytes, *, new_language: str, opf_path: str) -> bytes:
     declared_encoding = detect_declared_encoding(opf_bytes)
     tree = _parse_xml(opf_bytes, context=opf_path)
     package_element = tree.getroot()
@@ -301,9 +297,7 @@ def _patch_opf_language(
     return serialize_tree(tree, opf_bytes, declared_encoding=declared_encoding)
 
 
-def _apply_style_to_head(
-    head: etree._Element, *, style_id: str, css_text: str
-) -> None:
+def _apply_style_to_head(head: etree._Element, *, style_id: str, css_text: str) -> None:
     matching = [
         element
         for element in head.iterfind(f"{{{XHTML_NS}}}style")

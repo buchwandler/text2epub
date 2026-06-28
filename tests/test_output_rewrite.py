@@ -99,12 +99,8 @@ def build_custom_epub(
         f"{rendition_meta}"
         f"{extra_metadata}"
         "  </metadata>\n"
-        "  <manifest>\n"
-        + "\n".join(manifest_lines)
-        + "\n  </manifest>\n"
-        "  <spine>\n"
-        + "\n".join(spine_lines)
-        + "\n  </spine>\n"
+        "  <manifest>\n" + "\n".join(manifest_lines) + "\n  </manifest>\n"
+        "  <spine>\n" + "\n".join(spine_lines) + "\n  </spine>\n"
         "</package>\n"
     )
 
@@ -145,9 +141,7 @@ def override_entry(epub_path: Path, archive_name: str, new_bytes: bytes) -> None
     with zipfile.ZipFile(epub_path) as src:
         for info in src.infolist():
             payload = (
-                new_bytes
-                if info.filename == archive_name
-                else src.read(info.filename)
+                new_bytes if info.filename == archive_name else src.read(info.filename)
             )
             entries.append((info.filename, payload, info.compress_type))
     write_epub(epub_path, entries)
@@ -166,8 +160,11 @@ def _container_bytes(rootfiles: list[tuple[str, str]]) -> bytes:
     ]
     for full_path, media_type in rootfiles:
         parts.append(
-            b'    <rootfile full-path="' + full_path.encode()
-            + b'" media-type="' + media_type.encode() + b'" />\n'
+            b'    <rootfile full-path="'
+            + full_path.encode()
+            + b'" media-type="'
+            + media_type.encode()
+            + b'" />\n'
         )
     parts.append(b"  </rootfiles>\n</container>\n")
     return b"".join(parts)
@@ -191,6 +188,7 @@ def _simple_package_opf(
         'media-type="application/xhtml+xml"/></manifest>'
         '<spine><itemref idref="c"/></spine></package>'
     )
+
 
 # ---------------------------------------------------------------------------
 # Effective-rewrite detection and option validation
@@ -258,9 +256,7 @@ def test_invalid_style_id_fails(tmp_path: Path) -> None:
         rebuild_epub(
             ReplacementPlan(
                 source_epub=source,
-                output_rewrite=OutputRewriteOptions(
-                    css_text="p {}", style_id="1bad"
-                ),
+                output_rewrite=OutputRewriteOptions(css_text="p {}", style_id="1bad"),
             ),
             tmp_path / "out.epub",
         )
@@ -322,9 +318,7 @@ def test_missing_rootfile_fails(tmp_path: Path) -> None:
 
 def test_multiple_rootfiles_warns_and_selects_first(tmp_path: Path) -> None:
     opf = _simple_package_opf()
-    container = _container_bytes(
-        [("OEBPS/a.opf", OPF_PKG), ("OEBPS/b.opf", OPF_PKG)]
-    )
+    container = _container_bytes([("OEBPS/a.opf", OPF_PKG), ("OEBPS/b.opf", OPF_PKG)])
     source = tmp_path / "source.epub"
     write_epub(
         source,
@@ -360,9 +354,7 @@ def test_multiple_rootfiles_warns_and_selects_first(tmp_path: Path) -> None:
 
 
 def test_spine_scope_targets_only_spine_xhtml(tmp_path: Path) -> None:
-    source = create_test_epub(
-        tmp_path / "source.epub", ["<p>One.</p>", "<p>Two.</p>"]
-    )
+    source = create_test_epub(tmp_path / "source.epub", ["<p>One.</p>", "<p>Two.</p>"])
     report = rebuild_epub(
         ReplacementPlan(
             source_epub=source,
@@ -617,8 +609,7 @@ def test_multiple_dc_language_preserves_extras(tmp_path: Path) -> None:
         tmp_path / "source.epub",
         chapters=[("c.xhtml", "<p>x</p>")],
         extra_metadata=(
-            "    <dc:language>fr</dc:language>\n"
-            "    <dc:language>en-US</dc:language>\n"
+            "    <dc:language>fr</dc:language>\n    <dc:language>en-US</dc:language>\n"
         ),
     )
     out = tmp_path / "out.epub"
@@ -657,7 +648,7 @@ def test_root_language_preserves_descendant_attributes(tmp_path: Path) -> None:
         out,
     )
     ch = _read_out(out, "OEBPS/c.xhtml")
-    assert '<html' in ch and 'lang="es"' in ch
+    assert "<html" in ch and 'lang="es"' in ch
     # descendant foreign-language attributes survive
     assert 'lang="fr"' in ch and 'xml:lang="fr"' in ch
 
@@ -905,11 +896,11 @@ def test_fixed_layout_css_can_be_enabled(tmp_path: Path) -> None:
 def test_xml_features_survive_rewrite(tmp_path: Path) -> None:
     doc = (
         '<?xml version="1.0" encoding="utf-8"?>\n'
-        '<!DOCTYPE html>\n'
-        '<!-- prolog comment -->\n'
+        "<!DOCTYPE html>\n"
+        "<!-- prolog comment -->\n"
         '<html xmlns="http://www.w3.org/1999/xhtml" '
         'xmlns:epub="http://www.idpf.org/2007/ops" lang="en" xml:lang="en">\n'
-        '<head><title>T</title></head>\n'
+        "<head><title>T</title></head>\n"
         "<?my-pi sample ?>\n"
         "<body>\n"
         "<!-- body comment -->\n"

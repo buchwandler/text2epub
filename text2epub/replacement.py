@@ -44,8 +44,8 @@ def rebuild_epub(plan: ReplacementPlan, output_path: Path | str) -> ReplacementR
     validate_epub_package(source_epub)
 
     rewrite_options = plan.output_rewrite
-    effective_rewrite = (
-        rewrite_options is not None and is_effective_rewrite(rewrite_options)
+    effective_rewrite = rewrite_options is not None and is_effective_rewrite(
+        rewrite_options
     )
 
     # Validate option combinations before any manifest or package IO so that
@@ -76,7 +76,6 @@ def rebuild_epub(plan: ReplacementPlan, output_path: Path | str) -> ReplacementR
             manifest_hrefs = unique_manifest_xhtml_hrefs(manifest)
         detect_duplicate_blocks(plan.replacements)
 
-
         # Fast path: no block replacements and no effective rewrite.
         if not plan.replacements and not effective_rewrite:
             copy_epub(source_epub, output)
@@ -98,9 +97,7 @@ def rebuild_epub(plan: ReplacementPlan, output_path: Path | str) -> ReplacementR
             package_model = load_package_model(archive)
 
         # Block replacements -> byte overlays keyed by archive name.
-        overlays = _compute_block_overlays(
-            archive, plan.replacements, manifest_index
-        )
+        overlays = _compute_block_overlays(archive, plan.replacements, manifest_index)
 
         # Output rewrite composes on top of block overlays via an overlay-aware reader.
         rewrite_report: OutputRewriteReport | None = None
@@ -151,9 +148,7 @@ def rebuild_epub(plan: ReplacementPlan, output_path: Path | str) -> ReplacementR
 
         rewrite_epub(source_epub, output, overlays)
         changed_entries = [name for name in source_names if name in overlays]
-        unchanged_entries = [
-            name for name in source_names if name not in overlays
-        ]
+        unchanged_entries = [name for name in source_names if name not in overlays]
         return ReplacementReport(
             output_path=output,
             changed_entries=changed_entries,
@@ -162,7 +157,6 @@ def rebuild_epub(plan: ReplacementPlan, output_path: Path | str) -> ReplacementR
             unresolved_token_count=unresolved_token_count,
             output_rewrite=rewrite_report,
         )
-
 
 
 def _compute_block_overlays(
@@ -235,6 +229,7 @@ def _compute_block_overlays(
         updated = apply_changes(original, changes)
         overlays[href] = updated.encode("utf-8")
     return overlays
+
 
 def load_manifest(
     manifest: Path | str | Mapping[str, Any] | None,
