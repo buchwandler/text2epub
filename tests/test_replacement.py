@@ -5,7 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from text2epub import Replacement, ReplacementPlan, rebuild_epub
+from text2epub import (
+    OutputRewriteOptions,
+    Replacement,
+    ReplacementPlan,
+    rebuild_epub,
+)
 from text2epub.errors import (
     PackageError,
     ReplacementError,
@@ -329,3 +334,130 @@ def test_rebuild_refuses_in_place_output(tmp_path: Path) -> None:
 
     with pytest.raises(PackageError, match="overwrite the source EPUB"):
         rebuild_epub(ReplacementPlan(source_epub=source, replacements=[]), source)
+
+
+def test_block_replacement_and_output_rewrite_compose(tmp_path: Path) -> None:
+    source = create_test_epub(
+        tmp_path / "source.epub",
+        ["<p>Original text.</p>"],
+    )
+    manifest = create_manifest_for_fragment(
+        source,
+        "OEBPS/Text/chapter01.xhtml",
+        "Original text.",
+        replacement_mode="text_node_sequence",
+    )
+    out = tmp_path / "out.epub"
+    report = rebuild_epub(
+        ReplacementPlan(
+            source_epub=source,
+            extraction_manifest=manifest,
+            replacements=[
+                Replacement(
+                    block_id="spine-0001:block-000001",
+                    text="Updated text.",
+                    allow_inline_xhtml=False,
+                )
+            ],
+            output_rewrite=OutputRewriteOptions(
+                language="es",
+                patch_package_language=True,
+                patch_content_language=True,
+                css_text="p { color: red; }",
+            ),
+        ),
+        out,
+    )
+    # The single chapter entry carries both the block replacement and the rewrite.
+    assert "OEBPS/Text/chapter01.xhtml" in report.changed_entries
+    assert "OEBPS/content.opf" in report.changed_entries
+    with zipfile.ZipFile(out) as archive:
+        ch = archive.read("OEBPS/Text/chapter01.xhtml").decode("utf-8")
+        opf = archive.read("OEBPS/content.opf").decode("utf-8")
+    assert "Updated text." in ch
+    assert 'lang="es"' in ch
+    assert 'id="text2epub-output-policy"' in ch
+    assert "<dc:language>es</dc:language>" in opf
+
+
+def test_metadata_only_rewrite_without_replacements_or_manifest(
+    tmp_path: Path,
+) -> None:
+    source = create_test_epub(tmp_path / "source.epub", ["<p>Original text.</p>"])
+    out = tmp_path / "out.epub"
+    report = rebuild_epub(
+        ReplacementPlan(
+            source_epub=source,
+            output_rewrite=OutputRewriteOptions(
+                language="es",
+                patch_package_language=True,
+            ),
+        ),
+        out,
+    )
+    assert report.replacement_count == 0
+    assert report.changed_entries == ["OEBPS/content.opf"]
+    assert report.output_rewrite is not None
+    assert report.output_rewrite.applied is True
+
+
+def test_changed_entries_are_archive_ordered_union(tmp_path: Path) -> None:
+    source = create_test_epub(
+        tmp_path / "source.epub",
+        ["<p>Original text.</p>", "<p>Keep.</p>"],
+    )
+    manifest = create_manifest_for_fragment(
+        source,
+        "OEBPS/Text/chapter01.xhtml",
+        "Original text.",
+        replacement_mode="text_node_sequence",
+    )
+    out = tmp_path / "out.epub"
+    report = rebuild_epub(
+        ReplacementPlan(
+            source_epub=source,
+            extraction_manifest=manifest,
+            replacements=[
+                Replacement(
+                    block_id="spine-0001:block-000001",
+                    text="Updated text.",
+                    allow_inline_xhtml=False,
+                )
+            ],
+            output_rewrite=OutputRewriteOptions(
+                language="es",
+                patch_content_language=True,
+            ),
+        ),
+        out,
+    )
+    source_order = zipfile.ZipFile(source).namelist()
+    assert report.changed_entries == [
+        name for name in source_order if name in set(report.changed_entries)
+    ]
+    # both chapter entries and nav get language; chapter01 also has the block change.
+    assert set(report.changed_entries) >= {
+        "OEBPS/Text/chapter01.xhtml",
+        "OEBPS/Text/chapter02.xhtml",
+        "OEBPS/nav.xhtml",
+    }
+    # replacement_count counts block replacements only.
+    assert report.replacement_count == 1
+
+
+def test_noop_plan_with_noop_rewrite_options_is_byte_identical(
+    tmp_path: Path,
+) -> None:
+    source = create_test_epub(tmp_path / "source.epub", ["<p>Original text.</p>"])
+    out = tmp_path / "out.epub"
+    report = rebuild_epub(
+        ReplacementPlan(
+            source_epub=source,
+            output_rewrite=OutputRewriteOptions(),
+        ),
+        out,
+    )
+    assert sha256_path(out) == sha256_path(source)
+    assert report.changed_entries == []
+    assert report.output_rewrite is not None
+    assert report.output_rewrite.applied is False

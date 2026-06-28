@@ -28,6 +28,7 @@ unchanged package entries.
 - build EPUBs from explicit XHTML chapter bodies
 - safely rebuild existing EPUBs from extraction manifests and replacement plans
 - byte-identical no-op and identity rebuild paths
+- opt-in EPUB output rewrite: package and content language, plus caller-supplied CSS, composed with replacements and written atomically
 - basic EPUB package validation and unresolved-token checks
 
 ## Installation

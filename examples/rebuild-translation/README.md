@@ -15,8 +15,12 @@ automated translation pipelines build on.
   - `text_node_sequence` with `allow_inline_xhtml=True` for a fragment that adds
     `<em>` emphasis.
 - A no-op plan (no replacements) that copies the source EPUB byte for byte.
+- A language-only output rewrite (`OutputRewriteOptions`) that patches the OPF
+  and XHTML language to `es` with zero block replacements.
+- A language-plus-CSS output rewrite that also injects caller-supplied CSS.
+  text2epub injects the CSS verbatim and does not guarantee reader rendering.
 - The `ReplacementReport` fields: `changed_entries`, `replacement_count`,
-  `unresolved_token_count`.
+  `unresolved_token_count`, and the nested `output_rewrite` report.
 
 ## Run it
 
@@ -32,6 +36,8 @@ Outputs land in `dist/`:
 - `manifest.json` - the extraction manifest written to disk.
 - `translated.epub` - the rebuilt output.
 - `noop.epub` - a byte-identical copy of the source.
+- `language-only.epub` - publication language rewritten to `es`.
+- `language-and-css.epub` - language rewritten plus caller-supplied CSS injected.
 
 ## Equivalent CLI
 

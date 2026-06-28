@@ -27,6 +27,7 @@ from text2epub import (
     EpubMetadata,
     MarkdownBook,
     MarkdownChapter,
+    OutputRewriteOptions,
     Replacement,
     ReplacementPlan,
     create_epub_from_markdown,
@@ -39,6 +40,8 @@ DIST = HERE / "dist"
 SOURCE_EPUB = DIST / "source.epub"
 TRANSLATED_EPUB = DIST / "translated.epub"
 NOOP_EPUB = DIST / "noop.epub"
+LANGUAGE_ONLY_EPUB = DIST / "language-only.epub"
+LANGUAGE_CSS_EPUB = DIST / "language-and-css.epub"
 
 # The single generated chapter lands in this ZIP entry (chapter id defaults to
 # chapter-001, href Text/chapter-001.xhtml).
@@ -147,6 +150,62 @@ def rebuild_noop() -> None:
     print(f"Wrote no-op EPUB: {NOOP_EPUB}")
 
 
+def rebuild_language_only() -> None:
+    """Rewrite only the publication language, with zero block replacements.
+
+    No extraction manifest is needed because the default content scope
+    ('spine-and-navigation') does not require one.
+    """
+    report = rebuild_epub(
+        ReplacementPlan(
+            source_epub=SOURCE_EPUB,
+            output_rewrite=OutputRewriteOptions(
+                language="es",
+                patch_package_language=True,
+                patch_content_language=True,
+            ),
+        ),
+        LANGUAGE_ONLY_EPUB,
+    )
+    ow = report.output_rewrite
+    print(
+        "Language-only rebuild:\n"
+        f"  changed_entries={report.changed_entries}\n"
+        f"  old_language={ow.old_primary_language if ow else None} "
+        f"-> new_language={ow.new_primary_language if ow else None}"
+    )
+    print(f"Wrote language-only EPUB: {LANGUAGE_ONLY_EPUB}")
+
+
+def rebuild_language_and_css() -> None:
+    """Rewrite the language and inject caller-supplied CSS together.
+
+    text2epub injects the CSS verbatim; it does not interpret its semantics or
+    guarantee any particular rendering in a reading system.
+    """
+    css = "p { hyphens: auto; } body { text-align: justify; }"
+    report = rebuild_epub(
+        ReplacementPlan(
+            source_epub=SOURCE_EPUB,
+            output_rewrite=OutputRewriteOptions(
+                language="es",
+                patch_package_language=True,
+                patch_content_language=True,
+                css_text=css,
+            ),
+        ),
+        LANGUAGE_CSS_EPUB,
+    )
+    ow = report.output_rewrite
+    print(
+        "Language+CSS rebuild:\n"
+        f"  changed_entries={report.changed_entries}\n"
+        f"  language_patched_entries={ow.language_patched_entries if ow else []}\n"
+        f"  css_injected_entries={ow.css_injected_entries if ow else []}"
+    )
+    print(f"Wrote language+CSS EPUB: {LANGUAGE_CSS_EPUB}")
+
+
 def main() -> None:
     DIST.mkdir(parents=True, exist_ok=True)
     build_source_epub()
@@ -156,6 +215,8 @@ def main() -> None:
     )
     rebuild_translated(manifest)
     rebuild_noop()
+    rebuild_language_only()
+    rebuild_language_and_css()
 
 
 if __name__ == "__main__":

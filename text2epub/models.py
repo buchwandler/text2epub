@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 DEFAULT_UNRESOLVED_TOKEN_PATTERNS = [
     r"__(?:TAG|NAME)_\d+__",
@@ -76,6 +76,47 @@ class XhtmlChapter:
 
 
 @dataclass(slots=True)
+class OutputRewriteOptions:
+    """Opt-in output rewrite applied during :func:`rebuild_epub`.
+
+    The options describe generic, product-agnostic changes. text2epub does not
+    resolve a target language for a caller and does not interpret injected CSS.
+    """
+
+    language: str | None = None
+    patch_package_language: bool = False
+    patch_content_language: bool = False
+    patch_body_language: bool = False
+
+    css_text: str | None = None
+    style_id: str = "text2epub-output-policy"
+    content_scope: Literal[
+        "replacement-manifest",
+        "spine",
+        "spine-and-navigation",
+        "explicit",
+    ] = "spine-and-navigation"
+    content_hrefs: list[str] = field(default_factory=list)
+    inject_css_into_fixed_layout: bool = False
+
+
+@dataclass(slots=True)
+class OutputRewriteReport:
+    """Structured detail for an output rewrite applied during a rebuild."""
+
+    applied: bool = False
+    opf_path: str | None = None
+    changed_entries: list[str] = field(default_factory=list)
+    targeted_content_entries: list[str] = field(default_factory=list)
+    language_patched_entries: list[str] = field(default_factory=list)
+    css_injected_entries: list[str] = field(default_factory=list)
+    fixed_layout_skipped_entries: list[str] = field(default_factory=list)
+    old_primary_language: str | None = None
+    new_primary_language: str | None = None
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class Replacement:
     block_id: str
     text: str
@@ -89,6 +130,7 @@ class ReplacementPlan:
     extraction_manifest: Path | str | Mapping[str, Any] | None = None
     replacements: list[Replacement] = field(default_factory=list)
     options: BuildOptions = field(default_factory=BuildOptions)
+    output_rewrite: OutputRewriteOptions | None = None
 
 
 @dataclass(slots=True)
@@ -99,3 +141,4 @@ class ReplacementReport:
     replacement_count: int
     unresolved_token_count: int
     warnings: list[str] = field(default_factory=list)
+    output_rewrite: OutputRewriteReport | None = None

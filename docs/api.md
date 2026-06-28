@@ -31,6 +31,12 @@ This page documents the stable public API exposed from `text2epub.__init__`.
 
 .. autoclass:: text2epub.ReplacementReport
    :members:
+
+.. autoclass:: text2epub.OutputRewriteOptions
+   :members:
+
+.. autoclass:: text2epub.OutputRewriteReport
+   :members:
 ```
 
 ## Markdown builders
